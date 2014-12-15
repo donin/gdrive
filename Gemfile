@@ -38,3 +38,8 @@ gem 'spring',        group: :development
 # Use debugger
 # gem 'debugger', group: [:development, :test]
 
+# Google drive gem: github.com/gimite/google-drive-ruby 
+gem 'google_drive'
+gem 'google-api-client'
+gem 'signet'
+

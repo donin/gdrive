@@ -15,3 +15,7 @@
 /log/*.log
 /tmp
 /config/secrets.yml
+/config/*.p12
+
+# vim temporary files
+*~
