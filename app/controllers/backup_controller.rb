@@ -40,6 +40,10 @@ class BackupController < ApplicationController
   # Get p12 key file
   def self.apikey
     Google::APIClient::KeyUtils.load_from_pkcs12(
-      File.join(Rails.root, 'config', 'google_client.p12'), 'notasecret')
+      File.join(Rails.root, 'config', 
+                Rails.application.secrets.google_api_cert_file
+      ),
+      'notasecret'
+    )
   end
 end
