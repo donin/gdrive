@@ -44,7 +44,8 @@ class BackupController < ApplicationController
   # Make drive calls
   def self.gdrive
     drive = @client.discovered_api('drive','v2');
-    api_result = @client.execute(api_method: drive.files.list);
+    api_result = @client.execute(api_method: drive.files.list, 
+                                 parameters: {q: "'" + Rails.application.secrets.google_drive_backup_folder + "' in parents"});
     #puts api_result.inspect
     files = api_result.data
     puts files.inspect
