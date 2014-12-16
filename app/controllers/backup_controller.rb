@@ -26,7 +26,8 @@ class BackupController < ApplicationController
       audience: 'https://accounts.google.com/o/oauth2/token',
       scope: 'https://www.googleapis.com/auth/drive',
       issuer: Rails.application.secrets.google_api_issuer,
-      signing_key: apikey
+      signing_key: apikey,
+      person: Rails.application.secrets.google_api_sub
     )
     @client.authorization.fetch_access_token!
   end
@@ -35,6 +36,18 @@ class BackupController < ApplicationController
   def self.sync_backup
     # First of all auth via Google
     auth
+
+    # Make google drive calls
+    gdrive
+  end
+
+  # Make drive calls
+  def self.gdrive
+    drive = @client.discovered_api('drive','v2');
+    api_result = @client.execute(api_method: drive.files.list);
+    #puts api_result.inspect
+    files = api_result.data
+    puts files.inspect
   end
 
   # Get p12 key file
