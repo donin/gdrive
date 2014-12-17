@@ -3,7 +3,6 @@ require 'rubygems'
 require 'google/api_client'
 require 'google/api_client/client_secrets'
 require 'google/api_client/auth/installed_app'
-require 'google_drive'
 
 # Backup controller
 # Sync backup folder with google drive cloud service
@@ -11,13 +10,19 @@ class BackupController < ApplicationController
   # Google API auth client
   @client = nil
 
+  # Discover Google Drive API v2
+  @drive = nil
+
+  # Rails application secrets
+  @secrets = Rails.application.secrets
+
   # Connecting to Google API via oAuth2
   def self.auth
     # Authorizes with OAuth and gets an access token.
     # Initialize the client.
     @client = Google::APIClient.new(
-      application_name: 'Backup application',
-      application_version: '0.1.0'
+      application_name: 'Gdrive backup application',
+      application_version: '0.2.0'
     )
 
     # Load p12 auth key file
@@ -25,9 +30,9 @@ class BackupController < ApplicationController
       token_credential_uri: 'https://accounts.google.com/o/oauth2/token',
       audience: 'https://accounts.google.com/o/oauth2/token',
       scope: 'https://www.googleapis.com/auth/drive',
-      issuer: Rails.application.secrets.google_api_issuer,
+      issuer: @secrets.gapi_issuer,
       signing_key: apikey,
-      person: Rails.application.secrets.google_api_sub
+      person: @secrets.gapi_sub
     )
     @client.authorization.fetch_access_token!
   end
@@ -37,26 +42,24 @@ class BackupController < ApplicationController
     # First of all auth via Google
     auth
 
-    # Make google drive calls
-    gdrive
+    # Get all files in the backup folder
+    backup_files.each do |file|
+      puts file.title
+    end
   end
 
   # Make drive calls
-  def self.gdrive
-    drive = @client.discovered_api('drive','v2');
-    api_result = @client.execute(api_method: drive.files.list, 
-                                 parameters: {q: "'" + Rails.application.secrets.google_drive_backup_folder + "' in parents"});
-    #puts api_result.inspect
-    files = api_result.data
-    puts files.inspect
+  def self.backup_files
+    @drive = @client.discovered_api('drive', 'v2')
+    q = { q: "'#{@secrets.gdrive_backup_folder}' in parents" }
+    api_result = @client.execute(api_method: @drive.files.list, parameters: q)
+    api_result.data.items
   end
 
   # Get p12 key file
   def self.apikey
     Google::APIClient::KeyUtils.load_from_pkcs12(
-      File.join(Rails.root, 'config', 
-                Rails.application.secrets.google_api_cert_file
-      ),
+      File.join(Rails.root, 'config', @secrets.gapi_cert_file),
       'notasecret'
     )
   end

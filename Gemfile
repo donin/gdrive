@@ -39,7 +39,9 @@ gem 'spring',        group: :development
 # gem 'debugger', group: [:development, :test]
 
 # Google drive gem: github.com/gimite/google-drive-ruby 
-gem 'google_drive'
+#gem 'google_drive'
+
+# Google oAuth2 API libraries
 gem 'google-api-client'
 gem 'signet'
 
