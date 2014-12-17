@@ -43,10 +43,10 @@ class BackupController < ApplicationController
     # First of all auth via Google
     auth
 
+    # Clean up remote backup folder
+    clear_old_remote_files
+
     # Get all files in the local backup folder
-    local_files.each do |file|
-      puts file.title
-    end
   end
 
   # Upload backup files
@@ -60,8 +60,8 @@ class BackupController < ApplicationController
     limit = @secrets.gdrive_files_limit
     return if rfiles.count < limit
     # Get candidates for delete
-    rfiles.sort_by! { |a| a.createdDate.to_i }.reverse![0..limit]
-    remove_files!(rfiles)
+    ok = rfiles.sort_by { |a| a.createdDate.to_i }.reverse[0..limit-1]
+    remove_files!(rfiles-ok)
   end
 
   # Remove files from google drive directory
@@ -82,7 +82,8 @@ class BackupController < ApplicationController
 
   # Get all files in the backup directory
   def self.remote_files
-    q = { q: "'#{@secrets.gdrive_backup_folder}' in parents",
+    q = { q: "'#{@secrets.gdrive_backup_folder}' in parents " + 
+          " and trashed = false ",
           fields: 'items(createdDate,fileSize,id,mimeType,title)'
     }
     api_result = @client.execute(api_method: @drive.files.list, parameters: q)
