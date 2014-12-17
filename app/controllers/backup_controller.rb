@@ -48,7 +48,18 @@ class BackupController < ApplicationController
     end
   end
 
-  # Make drive calls
+  # Upload backup files
+  def upload_files
+  end
+
+  # Get local backup file names
+  def self.local_files
+    Dir["#{@secrets.backup_folder}/*tar.bz2"].map! do |filename|
+      File.basename(filename)
+    end
+  end
+
+  # Get all files in the backup directory
   def self.backup_files
     @drive = @client.discovered_api('drive', 'v2')
     q = { q: "'#{@secrets.gdrive_backup_folder}' in parents" }
