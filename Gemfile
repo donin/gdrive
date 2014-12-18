@@ -45,3 +45,6 @@ gem 'spring',        group: :development
 gem 'google-api-client'
 gem 'signet'
 
+# Helper gem for pretty filesize
+gem 'filesize'
+

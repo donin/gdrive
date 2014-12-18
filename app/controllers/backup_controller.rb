@@ -50,7 +50,20 @@ class BackupController < ApplicationController
   end
 
   # Upload backup files
-  def upload_files
+  def self.upload_files
+    # sort files by modification date (oldest first)
+    lfiles = local_files.sort_by { |f| File.new(f).mtime }
+    lfiles.each do |f| # for each file
+      next if skip_upload?(f)
+      puts 'uploading '+ File.basename(f) + 
+        ' (' + Filesize.from(File.size(f).to_s +' B').pretty + ')' 
+      # upload!(f)
+    end
+  end
+
+  # Upload file or not?
+  def self.skip_upload?(file)
+    remote_files.select { |k,v|  k == 'title' && v == File.basename(f) }
   end
 
   # Check remote folder limits
@@ -73,11 +86,9 @@ class BackupController < ApplicationController
     end
   end
 
-  # Get local backup file names
+  # Get local backup files
   def self.local_files
-    Dir["#{@secrets.backup_folder}/*tar.bz2"].map! do |filename|
-      File.basename(filename)
-    end
+    Dir["#{@secrets.backup_folder}/*tar.bz2"]
   end
 
   # Get all files in the backup directory
