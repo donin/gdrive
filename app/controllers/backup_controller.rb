@@ -93,7 +93,7 @@ class BackupController < ApplicationController
   # Get p12 key file
   def self.apikey
     Google::APIClient::KeyUtils.load_from_pkcs12(
-      File.join(Rails.root, 'config', @secrets.gapi_cert_file),
+      File.path(@secrets.gapi_cert_file),
       'notasecret'
     )
   end
