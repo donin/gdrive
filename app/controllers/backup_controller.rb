@@ -27,15 +27,22 @@ class BackupController < ApplicationController
 
     # Load p12 auth key file
     @client.authorization = Signet::OAuth2::Client.new(
+      oauth2_options
+    )
+    @client.authorization.fetch_access_token!
+    @drive = @client.discovered_api('drive', 'v2')
+  end
+
+  # Get oAuth2 login options
+  def self.oauth2_options
+    {
       token_credential_uri: 'https://accounts.google.com/o/oauth2/token',
       audience: 'https://accounts.google.com/o/oauth2/token',
       scope: 'https://www.googleapis.com/auth/drive',
       issuer: @secrets.gapi_issuer,
       signing_key: apikey,
       person: @secrets.gapi_sub
-    )
-    @client.authorization.fetch_access_token!
-    @drive = @client.discovered_api('drive', 'v2')
+    }
   end
 
   # Sync backup folder with google drive backup folder
@@ -43,27 +50,32 @@ class BackupController < ApplicationController
     # First of all auth via Google
     auth
 
-    # Clean up remote backup folder
-    clear_old_remote_files
-
-    # Get all files in the local backup folder
+    # Start upload workflow
+    upload_files
   end
 
-  # Upload backup files
+  # Upload backup files flow
   def self.upload_files
     # sort files by modification date (oldest first)
     lfiles = local_files.sort_by { |f| File.new(f).mtime }
-    lfiles.each do |f| # for each file
-      next if skip_upload?(f)
-      puts 'uploading '+ File.basename(f) + 
-        ' (' + Filesize.from(File.size(f).to_s +' B').pretty + ')' 
-      # upload!(f)
+    lfiles.each do |f|
+      clear_old_remote_files
+      upload!(f) unless skip_upload?(f)
     end
+  end
+
+  # Upload file to google drive folder
+  def self.upload!(f)
+    puts 'uploading ' + File.basename(f) +
+      ' (' + Filesize.from(File.size(f).to_s + ' B').pretty + ')'
   end
 
   # Upload file or not?
   def self.skip_upload?(file)
-    remote_files.select { |k,v|  k == 'title' && v == File.basename(f) }
+    rtitles = [] # array of remote file titles
+    remote_files.each { |f| rtitles.push f.title }
+    # Skip upload if file already exists in remote folder
+    rtitles.include? File.basename(file)
   end
 
   # Check remote folder limits
@@ -73,8 +85,11 @@ class BackupController < ApplicationController
     limit = @secrets.gdrive_files_limit
     return if rfiles.count < limit
     # Get candidates for delete
-    ok = rfiles.sort_by { |a| a.createdDate.to_i }.reverse[0..limit-1]
-    remove_files!(rfiles-ok)
+    # Sort by create date DESC (newest first)
+    # and get only last `limit` files
+    ok = rfiles.sort_by { |a| a.createdDate.to_i }.last(limit)
+    # Remove the difference between remote files and ok files
+    remove_files!(rfiles - ok)
   end
 
   # Remove files from google drive directory
@@ -93,9 +108,10 @@ class BackupController < ApplicationController
 
   # Get all files in the backup directory
   def self.remote_files
-    q = { q: "'#{@secrets.gdrive_backup_folder}' in parents " + 
-          " and trashed = false ",
-          fields: 'items(createdDate,fileSize,id,mimeType,title)'
+    dir_id = @secrets.gdrive_backup_folder
+    q = {
+      q: "'#{dir_id}' in parents and trashed = false",
+      fields: 'items(createdDate,fileSize,id,mimeType,title)'
     }
     api_result = @client.execute(api_method: @drive.files.list, parameters: q)
     api_result.data.items
