@@ -68,6 +68,14 @@ class BackupController < ApplicationController
   def self.upload!(f)
     puts 'uploading ' + File.basename(f) +
       ' (' + Filesize.from(File.size(f).to_s + ' B').pretty + ')'
+
+    dir_id = @secrets.gdrive_backup_folder
+    q = {
+      uploadType: 'media',
+      mimeType: 
+      title: File.basename(f)
+    }
+    api_result = @client.execute(api_method: @drive.files.insert, parameters: q)
   end
 
   # Upload file or not?
@@ -103,7 +111,9 @@ class BackupController < ApplicationController
 
   # Get local backup files
   def self.local_files
-    Dir["#{@secrets.backup_folder}/*tar.bz2"]
+    limit = @secrets.gdrive_files_limit
+    lfiles = Dir["#{@secrets.backup_folder}/*tar.bz2"]
+    lfiles.sort_by { |f| File.ctime(f) }.last(limit)
   end
 
   # Get all files in the backup directory
@@ -114,6 +124,17 @@ class BackupController < ApplicationController
       fields: 'items(createdDate,fileSize,id,mimeType,title)'
     }
     api_result = @client.execute(api_method: @drive.files.list, parameters: q)
+    api_result.data.items
+  end
+
+  # Get ALL google drive files
+  def self.remote_files_all
+    dir_id = @secrets.gdrive_backup_folder
+    q = {
+      fields: 'items(createdDate,fileSize,id,mimeType,title,labels)'
+    }
+    api_result = @client.execute(api_method: @drive.files.list, parameters: q)
+    api_result.data.items.each { |f| p "#{f.id} #{f.title} #{f.labels.trashed}" }
     api_result.data.items
   end
 

@@ -6,10 +6,18 @@ application up and running.
 Things you may want to cover:
 
 * Ruby version
-
+2.1
 * System dependencies
 
 * Configuration
+Add in your config/secrets.yml following:
+gapi_client_id: system-to-system application ID
+gapi_issuer: application issuer
+gapi_cert_file: /path/to/google/app/cert/fille.p12
+gapi_sub: google drive account to access resources
+gdrive_backup_folder: google drive backup folder ID
+gdrive_files_limit: number of archive files to store on drive
+backup_folder: /path/to/local/backup/folder
 
 * Database creation
 
