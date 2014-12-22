@@ -3,6 +3,7 @@ require 'rubygems'
 require 'google/api_client'
 require 'google/api_client/client_secrets'
 require 'google/api_client/auth/installed_app'
+require 'ruby-filemagic'
 
 # Backup controller
 # Sync backup folder with google drive cloud service
@@ -15,6 +16,13 @@ class BackupController < ApplicationController
 
   # Rails application secrets
   @secrets = Rails.application.secrets
+
+  # Set attribute accessors
+  # for client, drive variables
+  # for rails console session
+  class << self
+    attr_reader :drive, :client
+  end
 
   # Connecting to Google API via oAuth2
   def self.auth
@@ -69,10 +77,10 @@ class BackupController < ApplicationController
     puts 'uploading ' + File.basename(f) +
       ' (' + Filesize.from(File.size(f).to_s + ' B').pretty + ')'
 
+    media = Google::APIClient::UploadIO.new(f,)
     dir_id = @secrets.gdrive_backup_folder
     q = {
       uploadType: 'media',
-      mimeType: 
       title: File.basename(f)
     }
     api_result = @client.execute(api_method: @drive.files.insert, parameters: q)
