@@ -8,21 +8,11 @@ require 'ruby-filemagic'
 # Backup controller
 # Sync backup folder with google drive cloud service
 class BackupController < ApplicationController
-  # Google API auth client
-  @client = nil
-
-  # Discover Google Drive API v2
-  @drive = nil
+  # Google API auth client & drive api
+  @client, @drive = nil
 
   # Rails application secrets
   @secrets = Rails.application.secrets
-
-  # Set attribute accessors
-  # for client, drive variables
-  # for rails console session
-  class << self
-    attr_reader :drive, :client
-  end
 
   # Connecting to Google API via oAuth2
   def self.auth
@@ -77,13 +67,31 @@ class BackupController < ApplicationController
     puts 'uploading ' + File.basename(f) +
       ' (' + Filesize.from(File.size(f).to_s + ' B').pretty + ')'
 
-    media = Google::APIClient::UploadIO.new(f,)
-    dir_id = @secrets.gdrive_backup_folder
-    q = {
-      uploadType: 'media',
-      title: File.basename(f)
+    @client.execute(
+      api_method: @drive.files.insert,
+      parameters: { uploadType: 'multipart' },
+      body_object: upload_meta(f),
+      media: upload_media(f)
+    )
+  end
+
+  # Prepare file for upload
+  def self.upload_media(f)
+    Google::APIClient::UploadIO.new(f, mime(f))
+  end
+
+  # Return meta hash for upload request
+  def self.upload_meta(f)
+    {
+      title: File.basename(f),
+      description: 'isew amazon ec2 backup file',
+      parents: [{ id: @secrets.gdrive_backup_folder }]
     }
-    api_result = @client.execute(api_method: @drive.files.insert, parameters: q)
+  end
+
+  # Get file mime type
+  def self.mime(f)
+    FileMagic.new(FileMagic::MAGIC_MIME).file(f)
   end
 
   # Upload file or not?
@@ -100,10 +108,12 @@ class BackupController < ApplicationController
     rfiles = remote_files # get all remote files
     limit = @secrets.gdrive_files_limit
     return if rfiles.count < limit
+
     # Get candidates for delete
     # Sort by create date DESC (newest first)
     # and get only last `limit` files
     ok = rfiles.sort_by { |a| a.createdDate.to_i }.last(limit)
+
     # Remove the difference between remote files and ok files
     remove_files!(rfiles - ok)
   end
@@ -132,17 +142,6 @@ class BackupController < ApplicationController
       fields: 'items(createdDate,fileSize,id,mimeType,title)'
     }
     api_result = @client.execute(api_method: @drive.files.list, parameters: q)
-    api_result.data.items
-  end
-
-  # Get ALL google drive files
-  def self.remote_files_all
-    dir_id = @secrets.gdrive_backup_folder
-    q = {
-      fields: 'items(createdDate,fileSize,id,mimeType,title,labels)'
-    }
-    api_result = @client.execute(api_method: @drive.files.list, parameters: q)
-    api_result.data.items.each { |f| p "#{f.id} #{f.title} #{f.labels.trashed}" }
     api_result.data.items
   end
 

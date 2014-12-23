@@ -48,3 +48,5 @@ gem 'signet'
 # Helper gem for pretty filesize
 gem 'filesize'
 
+# Filemagic library
+gem 'ruby-filemagic'
