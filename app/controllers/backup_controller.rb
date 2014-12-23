@@ -20,7 +20,7 @@ class BackupController < ApplicationController
     # Initialize the client.
     @client = Google::APIClient.new(
       application_name: 'Gdrive backup application',
-      application_version: '0.2.0'
+      application_version: '0.6.0'
     )
 
     # Load p12 auth key file
@@ -55,8 +55,7 @@ class BackupController < ApplicationController
   # Upload backup files flow
   def self.upload_files
     # sort files by modification date (oldest first)
-    lfiles = local_files.sort_by { |f| File.new(f).mtime }
-    lfiles.each do |f|
+    local_files.each do |f|
       clear_old_remote_files
       upload!(f) unless skip_upload?(f)
     end
@@ -131,7 +130,7 @@ class BackupController < ApplicationController
   def self.local_files
     limit = @secrets.gdrive_files_limit
     lfiles = Dir["#{@secrets.backup_folder}/*tar.bz2"]
-    lfiles.sort_by { |f| File.ctime(f) }.last(limit)
+    lfiles.sort_by { |f| File.ctime(f) }.last(limit).reverse!
   end
 
   # Get all files in the backup directory
