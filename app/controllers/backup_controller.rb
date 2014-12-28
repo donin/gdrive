@@ -50,13 +50,15 @@ class BackupController < ApplicationController
 
     # Start upload workflow
     upload_files
+
+    # Cleanup remote dir
+    clear_old_remote_files
   end
 
   # Upload backup files flow
   def self.upload_files
     # sort files by modification date (oldest first)
     local_files.each do |f|
-      clear_old_remote_files
       upload!(f) unless skip_upload?(f)
     end
   end
