@@ -22,3 +22,6 @@
 /doc
 *.swp
 .yardoc
+
+# c9.io tmp files
+.c9
